@@ -9,8 +9,8 @@ export function Footer() {
           <Link href="/gallery" className="hover:text-white">your files</Link>
           <Link href="/developers" className="hover:text-white">api</Link>
           <Link href="/faq" className="hover:text-white">faq</Link>
-          <a href="#" className="hover:text-white">terms</a>
-          <a href="#" className="hover:text-white">privacy</a>
+          <Link href="/terms" className="hover:text-white">terms</Link>
+          <Link href="/privacy" className="hover:text-white">privacy</Link>
         </div>
         <p className="text-xs text-zinc-600">
           © {new Date().getFullYear()} Lumora.io — made with light &amp; a little
