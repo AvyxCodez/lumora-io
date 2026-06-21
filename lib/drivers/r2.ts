@@ -22,6 +22,7 @@ function s3(): S3Client {
   client = new S3Client({
     region: "auto",
     endpoint,
+    forcePathStyle: true,
     credentials: {
       accessKeyId: process.env.R2_ACCESS_KEY_ID!,
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
