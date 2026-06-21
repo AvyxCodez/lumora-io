@@ -35,7 +35,9 @@ export function Uploader() {
   const [origin, setOrigin] = useState("");
   const [mode, setMode] = useState<Mode>("keep");
   const [expiry, setExpiry] = useState<ExpiryKey>("24h");
+  const [urlInput, setUrlInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const urlRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -150,6 +152,31 @@ export function Uploader() {
     [mode, expiry]
   );
 
+  const uploadFromUrl = async () => {
+    const url = urlInput.trim();
+    if (!url) return;
+    setStatus("uploading");
+    setError(null);
+    setProgress(0);
+    try {
+      const res = await fetch("/api/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, expires: mode === "temp" ? expiry : "never" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed.");
+      setResults((prev) => [data.file, ...prev]);
+      addToHistory([data.file]);
+      setStatus("done");
+      setProgress(100);
+      setUrlInput("");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Upload failed.");
+      setStatus("error");
+    }
+  };
+
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -248,6 +275,27 @@ export function Uploader() {
           or <span className="text-aura-300 underline-offset-2 group-hover:underline">pick some</span>{" "}
           · paste a screenshot · {MAX_MB}&nbsp;MB max
         </p>
+      </div>
+
+      {/* URL import */}
+      <div className="mt-3 flex items-center gap-2">
+        <input
+          ref={urlRef}
+          type="url"
+          value={urlInput}
+          onChange={(e) => setUrlInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && uploadFromUrl()}
+          placeholder="or paste a URL to import…"
+          disabled={status === "uploading"}
+          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-ink-800/60 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition focus:border-aura-500/50 focus:ring-1 focus:ring-aura-500/30 disabled:opacity-50"
+        />
+        <button
+          onClick={uploadFromUrl}
+          disabled={!urlInput.trim() || status === "uploading"}
+          className="shrink-0 rounded-xl bg-aura-500/20 px-4 py-2.5 text-sm font-medium text-aura-300 ring-1 ring-aura-500/40 transition-colors hover:bg-aura-500/30 disabled:opacity-40"
+        >
+          import
+        </button>
       </div>
 
       {status === "uploading" && (

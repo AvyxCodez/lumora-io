@@ -24,6 +24,8 @@ export default function GalleryPage() {
   const [active, setActive] = useState<HistoryItem | null>(null);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<HistoryItem | null>(null);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "image" | "video" | "audio" | "file">("all");
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -121,21 +123,64 @@ export default function GalleryPage() {
             </div>
           ))}
         </section>
-      ) : (
-        <div className="glass mt-6 overflow-hidden rounded-2xl">
-          <div className="hidden items-center gap-3 border-b border-white/10 px-4 py-2.5 text-[11px] uppercase tracking-wide text-zinc-500 sm:flex">
-            <span className="w-10 shrink-0" />
-            <span className="flex-1">Name</span>
-            <span className="w-16">Type</span>
-            <span className="w-20 text-right">Size</span>
-            <span className="w-20 text-right">Added</span>
-            <span className="w-[88px] text-right">Actions</span>
-          </div>
-          {files.map((f) => (
-            <Row key={f.id} file={f} origin={origin} onOpen={setActive} onDelete={setDeleteTarget} />
-          ))}
-        </div>
-      )}
+      ) : (() => {
+        const q = search.toLowerCase();
+        const filtered = files.filter((f) => {
+          const matchType = typeFilter === "all" || kindFromType(f.type) === typeFilter;
+          const matchSearch = !q || f.originalName.toLowerCase().includes(q);
+          return matchType && matchSearch;
+        });
+        return (
+          <>
+            {/* Search + filter bar */}
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="search files…"
+                  className="w-full rounded-xl border border-white/10 bg-ink-800/60 py-2.5 pl-9 pr-3 text-sm text-white placeholder-zinc-500 outline-none transition focus:border-aura-500/50 focus:ring-1 focus:ring-aura-500/30"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                {(["all", "image", "video", "audio", "file"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTypeFilter(t)}
+                    className={`rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                      typeFilter === t
+                        ? "bg-aura-500/20 text-aura-300 ring-1 ring-aura-500/40"
+                        : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass mt-3 overflow-hidden rounded-2xl">
+              <div className="hidden items-center gap-3 border-b border-white/10 px-4 py-2.5 text-[11px] uppercase tracking-wide text-zinc-500 sm:flex">
+                <span className="w-10 shrink-0" />
+                <span className="flex-1">Name</span>
+                <span className="w-16">Type</span>
+                <span className="w-20 text-right">Size</span>
+                <span className="w-20 text-right">Added</span>
+                <span className="w-[88px] text-right">Actions</span>
+              </div>
+              {filtered.length === 0 ? (
+                <p className="px-4 py-10 text-center text-sm text-zinc-500">no files match your search.</p>
+              ) : (
+                filtered.map((f) => (
+                  <Row key={f.id} file={f} origin={origin} onOpen={setActive} onDelete={setDeleteTarget} />
+                ))
+              )}
+            </div>
+          </>
+        );
+      })()}
 
       {active && (
         <Lightbox file={active} origin={origin} onClose={() => setActive(null)} />
