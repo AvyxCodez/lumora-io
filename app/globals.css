@@ -105,3 +105,16 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(124, 69, 255, 0.55);
 }
+
+@keyframes ghost-float {
+  0%   { transform: translateY(0px) rotate(-3deg); }
+  25%  { transform: translateY(-18px) rotate(2deg); }
+  50%  { transform: translateY(-10px) rotate(-2deg); }
+  75%  { transform: translateY(-22px) rotate(3deg); }
+  100% { transform: translateY(0px) rotate(-3deg); }
+}
+
+.ghost-float {
+  animation: ghost-float var(--ghost-dur, 6s) ease-in-out infinite;
+  animation-delay: var(--ghost-delay, 0s);
+}
