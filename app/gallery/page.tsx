@@ -11,6 +11,7 @@ import {
   clearHistory,
   type HistoryItem,
 } from "@/lib/history";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const isExpired = (f: HistoryItem) =>
   f.expiresAt != null && Date.now() > f.expiresAt;
@@ -20,6 +21,8 @@ export default function GalleryPage() {
   const [ready, setReady] = useState(false);
   const [origin, setOrigin] = useState("");
   const [active, setActive] = useState<HistoryItem | null>(null);
+  const [clearConfirm, setClearConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -44,11 +47,7 @@ export default function GalleryPage() {
         <div className="flex items-center gap-2">
           {files.length > 0 && (
             <button
-              onClick={() => {
-                if (confirm("Clear your upload history on this device? Files stay online — you just lose the local list.")) {
-                  clearHistory();
-                }
-              }}
+              onClick={() => setClearConfirm(true)}
               className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-white/5"
             >
               Clear list
@@ -100,7 +99,7 @@ export default function GalleryPage() {
             <span className="w-[88px] text-right">Actions</span>
           </div>
           {files.map((f) => (
-            <Row key={f.id} file={f} origin={origin} onOpen={setActive} />
+            <Row key={f.id} file={f} origin={origin} onOpen={setActive} onDelete={setDeleteTarget} />
           ))}
         </div>
       )}
@@ -108,6 +107,23 @@ export default function GalleryPage() {
       {active && (
         <Lightbox file={active} origin={origin} onClose={() => setActive(null)} />
       )}
+
+      <ConfirmDialog
+        open={clearConfirm}
+        title="Clear history?"
+        message="Files stay online — you just lose the local list on this device."
+        confirmLabel="Clear"
+        onConfirm={() => { setClearConfirm(false); clearHistory(); }}
+        onCancel={() => setClearConfirm(false)}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete file?"
+        message={`"${deleteTarget?.originalName}" will be permanently deleted and the link will stop working.`}
+        confirmLabel="Delete"
+        onConfirm={() => { if (deleteTarget) deleteUpload(deleteTarget); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
@@ -211,10 +227,12 @@ function Row({
   file,
   origin,
   onOpen,
+  onDelete,
 }: {
   file: HistoryItem;
   origin: string;
   onOpen: (f: HistoryItem) => void;
+  onDelete: (f: HistoryItem) => void;
 }) {
   const [copied, setCopied] = useState(false);
   const url = `${origin}/f/${file.name}`;
@@ -317,11 +335,7 @@ function Row({
           {ICON.external}
         </a>
         <button
-          onClick={() => {
-            if (confirm(`Delete "${file.originalName}" permanently?`)) {
-              deleteUpload(file);
-            }
-          }}
+          onClick={() => onDelete(file)}
           title="Delete permanently"
           aria-label="Delete permanently"
           className="grid h-8 w-8 place-items-center rounded-lg transition-colors hover:bg-red-500/20 hover:text-red-300"

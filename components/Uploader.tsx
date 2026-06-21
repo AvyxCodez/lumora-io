@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, useEffect } from "react";
 import { formatBytes, kindFromType } from "@/lib/format";
 import { addToHistory, deleteUpload } from "@/lib/history";
 import { EXPIRY_PRESETS, expiresInLabel, type ExpiryKey } from "@/lib/expiry";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const MAX_MB = Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB) || 200;
 const DIRECT_UPLOAD = process.env.NEXT_PUBLIC_DIRECT_UPLOAD === "true";
@@ -300,6 +301,7 @@ function ResultRow({
 }) {
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const url = `${origin}/f/${file.name}`;
   const kind = kindFromType(file.type);
   const expLabel = expiresInLabel(file.expiresAt);
@@ -311,7 +313,7 @@ function ResultRow({
   };
 
   const remove = async () => {
-    if (!confirm(`Delete "${file.originalName}" permanently?`)) return;
+    setConfirmOpen(false);
     setDeleting(true);
     const ok = await deleteUpload(file);
     if (ok) onDeleted();
@@ -355,13 +357,21 @@ function ResultRow({
         {copied ? "copied!" : "copy"}
       </button>
       <button
-        onClick={remove}
+        onClick={() => setConfirmOpen(true)}
         disabled={deleting}
         title="Delete permanently"
         className="shrink-0 rounded-xl bg-white/5 px-2.5 py-2 text-xs text-zinc-400 transition-colors hover:bg-red-500/20 hover:text-red-300 disabled:opacity-50"
       >
         {deleting ? "…" : "🗑"}
       </button>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete file?"
+        message={`"${file.originalName}" will be permanently deleted and the link will stop working.`}
+        confirmLabel="Delete"
+        onConfirm={remove}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }
