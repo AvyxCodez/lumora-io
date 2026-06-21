@@ -18,6 +18,17 @@ export async function GET() {
     secretLength: process.env.R2_SECRET_ACCESS_KEY?.length,
   };
 
+  // Test 1: raw HTTPS connectivity (no auth, just TLS)
+  let fetchTest: { ok: boolean; status?: number; error?: string } = { ok: false };
+  try {
+    const r = await fetch(endpoint, { method: "GET" });
+    fetchTest = { ok: true, status: r.status };
+  } catch (e: any) {
+    fetchTest = { ok: false, error: e.message };
+  }
+
+  // Test 2: S3 SDK list
+  let sdkTest: { ok: boolean; keyCount?: number; error?: string; code?: string; httpStatus?: number } = { ok: false };
   try {
     const client = new S3Client({
       region: "auto",
@@ -27,19 +38,18 @@ export async function GET() {
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
       },
     });
-
     const result = await client.send(
       new ListObjectsV2Command({ Bucket: process.env.R2_BUCKET!, MaxKeys: 1 })
     );
-
-    return NextResponse.json({ ok: true, config, keyCount: result.KeyCount });
+    sdkTest = { ok: true, keyCount: result.KeyCount };
   } catch (err: any) {
-    return NextResponse.json({
+    sdkTest = {
       ok: false,
-      config,
       error: err.message,
       code: err.code,
       httpStatus: err.$metadata?.httpStatusCode,
-    });
+    };
   }
+
+  return NextResponse.json({ config, fetchTest, sdkTest });
 }
