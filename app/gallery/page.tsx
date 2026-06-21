@@ -12,6 +12,7 @@ import {
   type HistoryItem,
 } from "@/lib/history";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Mascot } from "@/components/Mascot";
 
 const isExpired = (f: HistoryItem) =>
   f.expiresAt != null && Date.now() > f.expiresAt;
@@ -33,37 +34,46 @@ export default function GalleryPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-16">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Your <span className="text-gradient">uploads</span>
-          </h1>
-          <p className="mt-2 max-w-xl text-zinc-400">
-            Stored privately in this browser only — nobody else can see this list.
-            Your files stay reachable through their links.
-          </p>
+    <div className="mx-auto max-w-5xl px-4 pt-10 sm:pt-14">
+
+      {/* Header banner — always visible */}
+      <section className="animate-fade-up">
+        <div className="glass relative overflow-hidden rounded-3xl px-6 py-7 shadow-glow">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-aura-500/20 blur-3xl" />
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-5">
+              <Mascot size={72} className="shrink-0 drop-shadow-[0_0_20px_rgba(124,69,255,0.4)]" />
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                  Your <span className="text-gradient">uploads</span>
+                </h1>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Private to this browser · files stay reachable through their links
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {files.length > 0 && (
+                <button
+                  onClick={() => setClearConfirm(true)}
+                  className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-white/5"
+                >
+                  Clear list
+                </button>
+              )}
+              <Link
+                href="/#upload"
+                className="rounded-xl bg-gradient-to-r from-aura-500 to-aura-700 px-5 py-2.5 text-sm font-medium text-white shadow-glow-sm transition-transform hover:scale-[1.03]"
+              >
+                Upload a file
+              </Link>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {files.length > 0 && (
-            <button
-              onClick={() => setClearConfirm(true)}
-              className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-white/5"
-            >
-              Clear list
-            </button>
-          )}
-          <Link
-            href="/#upload"
-            className="rounded-xl bg-gradient-to-r from-aura-500 to-aura-700 px-5 py-2.5 text-sm font-medium text-white shadow-glow-sm transition-transform hover:scale-[1.03]"
-          >
-            Upload a file
-          </Link>
-        </div>
-      </div>
+      </section>
 
       {!ready ? (
-        <div className="glass mt-10 overflow-hidden rounded-2xl">
+        <div className="glass mt-6 overflow-hidden rounded-2xl">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
@@ -76,20 +86,43 @@ export default function GalleryPage() {
           ))}
         </div>
       ) : files.length === 0 ? (
-        <div className="glass mt-10 rounded-3xl p-16 text-center">
-          <p className="text-lg text-white">No uploads yet</p>
-          <p className="mt-2 text-sm text-zinc-400">
-            Files you upload will show up here, just for you.
-          </p>
-          <Link
-            href="/#upload"
-            className="mt-6 inline-flex rounded-xl bg-gradient-to-r from-aura-500 to-aura-700 px-6 py-2.5 text-sm font-medium text-white shadow-glow-sm transition-transform hover:scale-[1.03]"
-          >
-            Upload your first file
-          </Link>
-        </div>
+        <section className="animate-fade-up mt-6 grid gap-4 sm:grid-cols-3">
+          {/* Empty state hero */}
+          <div className="glass col-span-full rounded-3xl p-12 text-center shadow-glow">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-aura-500/30 to-aura-700/20 ring-1 ring-aura-500/30">
+              <svg className="h-7 w-7 text-aura-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7h18M3 12h18M3 17h18" />
+              </svg>
+            </div>
+            <p className="text-xl font-semibold text-white">nothing here yet</p>
+            <p className="mt-2 text-sm text-zinc-400">
+              drop your first file and it'll show up right here, just for you.
+            </p>
+            <Link
+              href="/#upload"
+              className="mt-6 inline-flex rounded-xl bg-gradient-to-r from-aura-500 to-aura-700 px-6 py-2.5 text-sm font-medium text-white shadow-glow-sm transition-transform hover:scale-[1.03]"
+            >
+              drop something ✨
+            </Link>
+          </div>
+
+          {/* Feature pills */}
+          {[
+            { emoji: "🔒", title: "stays private", desc: "only visible in this browser" },
+            { emoji: "🔗", title: "links live on", desc: "even if you clear this list" },
+            { emoji: "💣", title: "self-destructs", desc: "set an expiry when uploading" },
+          ].map((f) => (
+            <div key={f.title} className="glass flex items-start gap-3 rounded-2xl px-5 py-4">
+              <span className="mt-0.5 text-2xl">{f.emoji}</span>
+              <div>
+                <p className="text-sm font-medium text-white">{f.title}</p>
+                <p className="text-xs text-zinc-400">{f.desc}</p>
+              </div>
+            </div>
+          ))}
+        </section>
       ) : (
-        <div className="glass mt-10 overflow-hidden rounded-2xl">
+        <div className="glass mt-6 overflow-hidden rounded-2xl">
           <div className="hidden items-center gap-3 border-b border-white/10 px-4 py-2.5 text-[11px] uppercase tracking-wide text-zinc-500 sm:flex">
             <span className="w-10 shrink-0" />
             <span className="flex-1">Name</span>
