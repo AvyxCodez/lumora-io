@@ -4,8 +4,9 @@ import path from "path";
 import { validateUpload } from "@/lib/upload-policy";
 import { resolveExpiry } from "@/lib/expiry";
 import { generateDeleteToken } from "@/lib/delete-token";
-import { presignPut } from "@/lib/drivers/r2";
 import type { FileRecord } from "@/lib/types";
+
+const WORKER_URL = process.env.R2_WORKER_URL?.replace(/\/$/, "");
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,7 +53,11 @@ export async function POST(req: NextRequest) {
     deleteToken,
   };
 
-  const presignedUrl = await presignPut(record);
+  if (!WORKER_URL) {
+    return NextResponse.json({ error: "R2_WORKER_URL not configured." }, { status: 500 });
+  }
+
+  const presignedUrl = `${WORKER_URL}/${record.name}`;
 
   const uploadHeaders: Record<string, string> = {
     "Content-Type": record.type,
