@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { usingR2 } from "@/lib/storage";
 import { verifyDeleteToken } from "@/lib/delete-token";
-import { presignDelete } from "@/lib/drivers/r2";
 import { getRecord, deleteFile } from "@/lib/storage";
 
 export const runtime = "nodejs";
@@ -24,9 +23,20 @@ export async function POST(req: NextRequest) {
     if (!verifyDeleteToken(id, token)) {
       return NextResponse.json({ error: "Invalid delete token." }, { status: 403 });
     }
+    const workerUrl = process.env.R2_WORKER_URL?.replace(/\/$/, "");
+    const deleteSecret = process.env.DELETE_SECRET;
+    if (!workerUrl || !deleteSecret) {
+      return NextResponse.json({ error: "Server misconfigured." }, { status: 500 });
+    }
     const storedName = name || id;
-    const deleteUrl = await presignDelete(storedName);
-    return NextResponse.json({ ok: true, deleteUrl });
+    const res = await fetch(`${workerUrl}/${storedName}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${deleteSecret}` },
+    });
+    if (!res.ok) {
+      return NextResponse.json({ error: "Delete failed." }, { status: 502 });
+    }
+    return NextResponse.json({ ok: true });
   }
 
   // Local driver: verify token via record lookup and delete directly.
