@@ -47,9 +47,14 @@ export async function deleteUpload(item: HistoryItem): Promise<boolean> {
       const res = await fetch("/api/files/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: item.id, token: item.deleteToken }),
+        body: JSON.stringify({ id: item.id, token: item.deleteToken, name: item.name }),
       });
       if (!res.ok) return false;
+      const data = await res.json();
+      // R2 mode: server returns a presigned DELETE URL for the browser to execute.
+      if (data.deleteUrl) {
+        await fetch(data.deleteUrl, { method: "DELETE" });
+      }
     } catch {
       return false;
     }

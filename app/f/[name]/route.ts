@@ -10,19 +10,18 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   const { name } = await params;
-  const record = await getRecord(name);
-
-  if (!record) {
-    return new Response("Not found", { status: 404 });
-  }
-
   const download = req.nextUrl.searchParams.get("download") !== null;
 
-  // If the backend (e.g. R2 + a public/CDN domain) can serve the bytes
-  // directly, redirect there instead of proxying through the server.
-  const cdn = publicUrl(record.name);
-  if (cdn && !download) {
+  // Fast path: if the backend exposes a public CDN URL, redirect immediately
+  // without making any outbound request to the storage provider.
+  const cdn = publicUrl(name);
+  if (cdn) {
     return NextResponse.redirect(cdn, 302);
+  }
+
+  const record = await getRecord(name);
+  if (!record) {
+    return new Response("Not found", { status: 404 });
   }
 
   let bytes: Buffer;

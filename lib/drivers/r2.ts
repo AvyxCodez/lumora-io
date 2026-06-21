@@ -6,6 +6,7 @@ import {
   ListObjectsV2Command,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import path from "path";
 import type { FileRecord, StorageDriver } from "@/lib/types";
 
@@ -143,3 +144,24 @@ export const r2Driver: StorageDriver = {
     return PUBLIC_BASE ? `${PUBLIC_BASE}/${name}` : null;
   },
 };
+
+export async function presignPut(record: FileRecord): Promise<string> {
+  const cmd = new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: record.name,
+    ContentType: record.type,
+    Metadata: {
+      id: record.id,
+      originalname: encodeURIComponent(record.originalName),
+      uploadedat: String(record.uploadedAt),
+      deletetoken: record.deleteToken,
+      ...(record.expiresAt ? { expiresat: String(record.expiresAt) } : {}),
+    },
+  });
+  return getSignedUrl(s3(), cmd, { expiresIn: 3600 });
+}
+
+export async function presignDelete(name: string): Promise<string> {
+  const cmd = new DeleteObjectCommand({ Bucket: BUCKET, Key: name });
+  return getSignedUrl(s3(), cmd, { expiresIn: 604800 });
+}

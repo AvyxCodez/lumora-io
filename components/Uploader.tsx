@@ -6,6 +6,7 @@ import { addToHistory, deleteUpload } from "@/lib/history";
 import { EXPIRY_PRESETS, expiresInLabel, type ExpiryKey } from "@/lib/expiry";
 
 const MAX_MB = Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB) || 200;
+const DIRECT_UPLOAD = process.env.NEXT_PUBLIC_DIRECT_UPLOAD === "true";
 
 type UploadedFile = {
   id: string;
@@ -40,7 +41,7 @@ export function Uploader() {
   }, []);
 
   const upload = useCallback(
-    (files: FileList | File[]) => {
+    async (files: FileList | File[]) => {
       const list = Array.from(files);
       if (list.length === 0) return;
 
@@ -48,6 +49,67 @@ export function Uploader() {
       setError(null);
       setProgress(0);
 
+      if (DIRECT_UPLOAD) {
+        // Presigned upload: browser → R2 directly, one file at a time.
+        const uploaded: UploadedFile[] = [];
+        try {
+          for (let i = 0; i < list.length; i++) {
+            const file = list[i];
+            const expires = mode === "temp" ? expiry : "never";
+
+            // Step 1: get presigned URL + record from server.
+            const presignRes = await fetch("/api/presign", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: file.name,
+                type: file.type || "application/octet-stream",
+                size: file.size,
+                expires,
+              }),
+            });
+            if (!presignRes.ok) {
+              const { error } = await presignRes.json().catch(() => ({}));
+              throw new Error(error || "Failed to get upload URL.");
+            }
+            const { presignedUrl, record, uploadHeaders } = await presignRes.json();
+
+            // Step 2: PUT file bytes directly to R2 with progress tracking.
+            await new Promise<void>((resolve, reject) => {
+              const xhr = new XMLHttpRequest();
+              xhr.open("PUT", presignedUrl);
+              Object.entries(uploadHeaders as Record<string, string>).forEach(
+                ([k, v]) => xhr.setRequestHeader(k, v)
+              );
+              xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                  const fileProgress = (i / list.length + e.loaded / e.total / list.length) * 100;
+                  setProgress(Math.round(fileProgress));
+                }
+              };
+              xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) resolve();
+                else reject(new Error(`R2 upload failed (${xhr.status})`));
+              };
+              xhr.onerror = () => reject(new Error("Network error."));
+              xhr.send(file);
+            });
+
+            uploaded.push(record);
+          }
+
+          setResults((prev) => [...uploaded, ...prev]);
+          addToHistory(uploaded);
+          setStatus("done");
+          setProgress(100);
+        } catch (e: unknown) {
+          setError(e instanceof Error ? e.message : "Upload failed.");
+          setStatus("error");
+        }
+        return;
+      }
+
+      // Local driver: POST the whole file to our API.
       const form = new FormData();
       list.forEach((f) => form.append("file", f));
       form.append("expires", mode === "temp" ? expiry : "never");
