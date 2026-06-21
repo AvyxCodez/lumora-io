@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import dns from "dns/promises";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,16 @@ export async function GET() {
     keyLength: process.env.R2_ACCESS_KEY_ID?.length,
     secretLength: process.env.R2_SECRET_ACCESS_KEY?.length,
   };
+
+  // Test 0: DNS resolution
+  const hostname = new URL(endpoint).hostname;
+  let dnsTest: { ok: boolean; addresses?: string[]; error?: string } = { ok: false };
+  try {
+    const addresses = await dns.resolve4(hostname);
+    dnsTest = { ok: true, addresses };
+  } catch (e: any) {
+    dnsTest = { ok: false, error: e.message };
+  }
 
   // Test 1: raw HTTPS connectivity (no auth, just TLS)
   let fetchTest: { ok: boolean; status?: number; error?: string } = { ok: false };
@@ -51,5 +62,5 @@ export async function GET() {
     };
   }
 
-  return NextResponse.json({ config, fetchTest, sdkTest });
+  return NextResponse.json({ config, dnsTest, fetchTest, sdkTest });
 }
